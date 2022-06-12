@@ -24,10 +24,10 @@ ImageGallery.propTypes = {
   onClickImg: PropTypes.func.isRequired,
   pictures: PropTypes.arrayOf(
     PropTypes.shape({
-      alt: PropTypes.string.isRequired,
-      href: PropTypes.string.isRequired,
-      onClick: PropTypes.func.isRequired,
-      small: PropTypes.string.isRequired,
+      id: PropTypes.number.isRequired,
+      largeImageURL: PropTypes.string.isRequired,
+      tags: PropTypes.string.isRequired,
+      webformatURL: PropTypes.string.isRequired,
     }),
   ),
 };

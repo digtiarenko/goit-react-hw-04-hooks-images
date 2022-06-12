@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { useState, useEffect } from 'react';
 
 import SearchBar from './SearchBar';
 import ImageGallery from './ImageGallery';
@@ -7,46 +7,40 @@ import Loader from './Loader';
 import Modal from './Modal';
 import * as Api from '../Services/Api';
 
-export class App extends Component {
-  static propTypes = {};
+export default function App() {
+  const [result, setResult] = useState([]);
+  const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [status, setStatus] = useState('idle');
+  const [modalUrl, setModalUrl] = useState('');
 
-  state = {
-    result: [],
-    page: 1,
-    searchQuery: '',
-    status: 'idle',
-    modalUrl: '',
+  const handleSearchQuery = searchQuery => {
+    setSearchQuery(searchQuery);
+    setPage(1);
+    setResult([]);
   };
 
-  handleSearchQuery = searchQuery => {
-    this.setState({ searchQuery, page: 1, result: [] });
-  };
-
-  componentDidUpdate(prevProps, prevState) {
-    if (
-      prevState.searchQuery !== this.state.searchQuery ||
-      prevState.page !== this.state.page
-    ) {
-      this.fetchImages();
+  useEffect(() => {
+    if (searchQuery === '') {
+      return;
     }
-  }
 
-  fetchImages = () => {
-    const { searchQuery, page } = this.state;
+    const fetchImages = () => {
+      setStatus('pending');
+      Api.fetchImages({ searchQuery, page })
+        .then(hits => handleHits(hits))
+        .catch(error => handleError(error));
+    };
 
-    this.setState({ status: 'pending' });
+    fetchImages();
+  }, [searchQuery, page]);
 
-    Api.fetchImages({ searchQuery, page })
-      .then(hits => this.handleHits(hits))
-      .catch(error => this.handleError(error));
-  };
-
-  handleError = error => {
+  const handleError = error => {
     console.log(error.toString());
-    this.setState({ status: 'error' });
+    setStatus('error');
   };
 
-  handleHits = hits => {
+  const handleHits = hits => {
     const normalizedHits = hits.map(
       ({ id, webformatURL, largeImageURL, tags }) => ({
         id,
@@ -56,43 +50,32 @@ export class App extends Component {
       }),
     );
 
-    this.setState(prevState => ({
-      result: [...prevState.result, ...normalizedHits],
-      status: 'resolved',
-      error: null,
-    }));
+    setResult(prevResult => [...prevResult, ...normalizedHits]);
+    setStatus('resolved');
   };
 
-  handleLoadMore = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
+  const handleLoadMore = () => {
+    setPage(prevPage => prevPage + 1);
   };
 
-  openModal = modalSrc => {
-    this.setState({
-      modalUrl: modalSrc,
-    });
-  };
-  closeModal = () => {
-    this.setState({
-      modalUrl: '',
-    });
+  const openModal = modalSrc => {
+    setModalUrl(modalSrc);
   };
 
-  render() {
-    const { status, result, modalUrl } = this.state;
-    return (
-      <div>
-        <SearchBar onSubmit={this.handleSearchQuery} />
-        {status === 'error' && <h2> There're no such pics in our database</h2>}
-        {result.length > 0 && (
-          <ImageGallery pictures={result} onClickImg={this.openModal} />
-        )}
-        {status === 'pending' && <Loader />}
-        {status === 'resolved' && <Button onClick={this.handleLoadMore} />}
-        {modalUrl && <Modal src={modalUrl} onClick={this.closeModal} />}
-      </div>
-    );
-  }
+  const closeModal = () => {
+    setModalUrl('');
+  };
+
+  return (
+    <div>
+      <SearchBar onSubmit={handleSearchQuery} />
+      {status === 'error' && <h2> There're no such pics in our database</h2>}
+      {result.length > 0 && (
+        <ImageGallery pictures={result} onClickImg={openModal} />
+      )}
+      {status === 'pending' && <Loader />}
+      {status === 'resolved' && <Button onClick={handleLoadMore} />}
+      {modalUrl && <Modal src={modalUrl} onClick={closeModal} />}
+    </div>
+  );
 }
-
-export default App;
